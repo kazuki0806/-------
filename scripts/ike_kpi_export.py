@@ -9,6 +9,9 @@
   --sheet PATH      「【いけ】属人ルート 面談・成約」を xlsx に書き出したもの（任意）
   --form-json PATH  3分チェック（Addnessフォーム）の list_form_responses の結果を
                     responses の配列のまま保存したもの（任意）
+  --note-json PATH  scripts/note_stats.py の出力（noteにログインして取った閲覧数。任意）
+  --note-history PATH  これまでの note 閲覧数（累計）を {"YYYY-MM-DD": 値} にしたもの（任意）。
+                    Addness に入っている点を渡すと、月の証憑にその月の全部の日が入る
 
 出力（--points DIR）:
   <キー>.json      record_analytics_metric_points にそのまま渡す点
@@ -106,6 +109,21 @@ def read_dash(path, flow, stock):
             d = to_date(day)
             if d and v.get("pv") is not None:
                 stock["note_views"][d] = v["pv"]
+
+
+def read_note(note_json, note_history, stock, d_to):
+    """noteの閲覧数（累計）。kpi-dashboard の値に、これまでの点と今回ログインして取った値を重ねる。"""
+    if note_history:
+        for day, v in json.load(open(note_history)).items():
+            d = to_date(day)
+            if d and v is not None:
+                stock["note_views"][d] = v
+    if note_json:
+        n = json.load(open(note_json))
+        d = to_date(n.get("date"))
+        if d:
+            # noteの集計は1日1回。取った日が TO より後でも、TO 時点の累計として入れる
+            stock["note_views"][min(d, d_to)] = n["totals"]["pv"]
 
 
 def read_sheet(path, flow):
@@ -225,6 +243,8 @@ def main():
     ap.add_argument("--dash", required=True, help="kpi-dashboard の clone")
     ap.add_argument("--sheet", help="「【いけ】属人ルート 面談・成約」の xlsx")
     ap.add_argument("--form-json", help="3分チェックの回答（list_form_responses の responses）")
+    ap.add_argument("--note-json", help="scripts/note_stats.py の出力")
+    ap.add_argument("--note-history", help="これまでの note 閲覧数 {日付: 値}")
     ap.add_argument("--from", dest="d_from", required=True)
     ap.add_argument("--to", dest="d_to", required=True)
     ap.add_argument("--points", help="点と証憑を書き出すフォルダ")
@@ -243,6 +263,7 @@ def main():
         has["check_answers"] = True
 
     d_from, d_to = dt.date.fromisoformat(a.d_from), dt.date.fromisoformat(a.d_to)
+    read_note(a.note_json, a.note_history, stock, d_to)
     points = build_points(flow, stock, d_from, d_to, has)
 
     # 確かめ用：flowは月の合計、stockは月の最後の値
