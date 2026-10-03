@@ -2,9 +2,9 @@
 """noteにログインして、記事ごとの閲覧数・スキ・コメントの累計を取る。
 
 ログイン情報は環境変数から読む（チャットやリポジトリには書かない）:
-  NOTE_EMAIL / NOTE_PASSWORD   noteのログインに使うメールアドレス（またはnote ID）とパスワード
-  NOTE_SESSION                 （任意）ブラウザの Cookie「_note_session_v5」の値。
-                               メール・パスワードでのログインが通らない時だけ使う
+  NOTE_SESSION                 ブラウザの Cookie「_note_session_v5」の値（優先して使う）。
+                               切れたら取り直す
+  NOTE_EMAIL / NOTE_PASSWORD   メール・パスワードでのログイン（2026-10-03 時点で reCAPTCHA に止められる）
 
 出力（--out PATH、JSON）:
   {"fetched_at", "last_calculate_at", "date", "totals": {"pv","like","comment"},
@@ -26,18 +26,22 @@ JST = dt.timezone(dt.timedelta(hours=9))
 
 
 def login(s):
+    """Cookie があれば先に使う。メール・パスワードは reCAPTCHA で止められることが多いので、Cookie が無い時だけ試す。"""
+    cookie = os.environ.get("NOTE_SESSION")
+    if cookie:
+        s.cookies.set("_note_session_v5", cookie.strip(), domain=".note.com")
+        return "cookie"
     email, password = os.environ.get("NOTE_EMAIL"), os.environ.get("NOTE_PASSWORD")
     if email and password:
         r = s.post(f"{BASE}/api/v1/sessions/sign_in",
                    json={"login": email, "password": password}, timeout=30)
-        if r.ok and "error" not in (r.json() if r.headers.get("content-type", "").startswith("application/json") else {}):
+        body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        if r.ok and "error" not in body:
             return "password"
-        print(f"メール・パスワードでのログインに失敗: HTTP {r.status_code} {r.text[:200]}", file=sys.stderr)
-    cookie = os.environ.get("NOTE_SESSION")
-    if cookie:
-        s.cookies.set("_note_session_v5", cookie, domain=".note.com")
-        return "cookie"
-    raise SystemExit("ログインできない：NOTE_EMAIL・NOTE_PASSWORD（または NOTE_SESSION）を環境変数に入れる")
+        code = (body.get("error") or {}).get("code", "")
+        raise SystemExit(f"メール・パスワードでのログインに失敗（HTTP {r.status_code} {code}）。"
+                         "reCAPTCHA で止められる時は NOTE_SESSION（Cookie _note_session_v5 の値）を環境変数に入れる")
+    raise SystemExit("ログインできない：NOTE_SESSION（または NOTE_EMAIL・NOTE_PASSWORD）を環境変数に入れる")
 
 
 def fetch_stats(s):
@@ -47,7 +51,7 @@ def fetch_stats(s):
         r.raise_for_status()
         body = r.json()
         if "error" in body:
-            raise SystemExit(f"統計を取れない（ログインが切れている可能性）: {body['error']}")
+            raise SystemExit(f"統計を取れない（ログインが切れている可能性。NOTE_SESSION を取り直す）: {body['error']}")
         d = body.get("data") or {}
         head = head or d
         for n in d.get("note_stats") or []:
