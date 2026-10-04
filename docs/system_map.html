@@ -1,0 +1,408 @@
+<title>社内システム全体図</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* レイアウト：左に細い目次、本文は1カラム。図は幅いっぱい、表は横スクロール。 */
+:root{
+  --bg:#f6f7f4; --paper:#ffffff; --fg:#1d2430; --muted:#5d6675; --line:#d9ddd6;
+  --ink:#1f3a5f;            /* 見出し・主な線 */
+  --actions:#1f7a8c;        /* GitHub Actions（クラウドで動く） */
+  --mac:#b86a00;            /* 池田さんのMacでしか動かない */
+  --ai:#2f7d4f;             /* Claude Code のルーティン */
+  --manual:#8a3b6b;         /* 人の手で動かす */
+  --warn-bg:#fff4e0; --ok-bg:#e8f3ec; --bad-bg:#fbe9ec; --bad:#a82a3a;
+  --font-body:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif;
+  --font-head:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141a21; --paper:#1c242d; --fg:#e6e9ee; --muted:#9aa5b4; --line:#333d49;
+  --ink:#9cc3ef; --actions:#5fc3d6; --mac:#f0a84a; --ai:#6fcf97; --manual:#e08cc0;
+  --warn-bg:#3a2d16; --ok-bg:#1c3326; --bad-bg:#3d1f25; --bad:#ff8a9a; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#141a21; --paper:#1c242d; --fg:#e6e9ee; --muted:#9aa5b4; --line:#333d49;
+  --ink:#9cc3ef; --actions:#5fc3d6; --mac:#f0a84a; --ai:#6fcf97; --manual:#e08cc0;
+  --warn-bg:#3a2d16; --ok-bg:#1c3326; --bad-bg:#3d1f25; --bad:#ff8a9a; color-scheme:dark }
+
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.75;padding-inline:16px;padding-block:24px 64px}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,h3{font-family:var(--font-head);color:var(--ink);text-wrap:balance;line-height:1.3}
+h1{font-size:clamp(26px,4vw,38px);font-weight:900;margin:0 0 6px}
+h2{font-size:22px;font-weight:700;margin:48px 0 12px;padding-top:12px;border-top:2px solid var(--ink)}
+h3{font-size:17px;font-weight:700;margin:24px 0 8px}
+p{margin:0 0 12px;max-width:72ch}
+.lead{font-size:16px;color:var(--muted);max-width:80ch}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.toc{display:flex;flex-wrap:wrap;gap:8px 16px;margin:18px 0 8px;padding:0;list-style:none;font-size:14px}
+.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}
+a{color:var(--ink)}
+figure{margin:16px 0 8px;padding:12px;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow-x:auto}
+figure svg{display:block;max-width:100%;height:auto;min-width:720px}
+figcaption{font-size:13px;color:var(--muted);margin-top:8px;max-width:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;margin:8px 0 0}
+.legend span::before{content:"";display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px;border:2px solid currentColor}
+.legend .k-actions{color:var(--actions)} .legend .k-mac{color:var(--mac)} .legend .k-ai{color:var(--ai)} .legend .k-manual{color:var(--manual)}
+.legend .k-mac::before{border-style:dashed}
+.tbl{overflow-x:auto;margin:12px 0 4px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{font-family:var(--font-head);font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--ink) 6%,var(--paper));white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+code{font-family:var(--font-mono);font-size:13px;background:color-mix(in srgb,var(--fg) 7%,transparent);padding:1px 5px;border-radius:3px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid currentColor}
+.pill.actions{color:var(--actions)} .pill.mac{color:var(--mac);border-style:dashed} .pill.ai{color:var(--ai)} .pill.manual{color:var(--manual)}
+.ok{background:var(--ok-bg)} .warn{background:var(--warn-bg)} .bad{background:var(--bad-bg);color:var(--bad);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:12px 0}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.card h3{margin:0 0 6px;font-size:16px}
+.card ul{margin:0;padding-left:18px;font-size:14px}
+.card li{margin:2px 0}
+.issues{counter-reset:n;list-style:none;padding:0;margin:12px 0}
+.issues li{counter-increment:n;position:relative;padding:10px 12px 10px 44px;margin:0 0 8px;background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:4px;max-width:none}
+.issues li::before{content:counter(n);position:absolute;left:12px;top:9px;font-family:var(--font-mono);font-weight:500;color:var(--bad)}
+.issues li b{display:block;margin-bottom:2px}
+.note{font-size:13px;color:var(--muted)}
+.small{font-size:13px}
+@media (max-width:640px){ body{font-size:14px} h2{font-size:19px} }
+</style>
+
+<div class="wrap">
+<div class="eyebrow">2026-10-04 時点　／　Addnessゴール「社内のシステム作り」</div>
+<h1>社内システム全体図</h1>
+<p class="lead">月商3000万に向けた3つの入り口（クラウドワークス・Threads・インスタインフルエンサー）について、お客さんが来る所から、台帳、自動化、数字を見る場所までを1枚にした。読んだのは GitHub の3リポジトリ（threads-actions 29ファイル、kpi-dashboard 66ファイル、------- の5ブランチ）、Addness のゴール23件・KPI 30本・ダッシュボード3枚、Google Drive のシート・文書、Notion の投稿表とマニュアル。</p>
+<ul class="toc">
+  <li><a href="#overview">全体像</a></li>
+  <li><a href="#flows">入口ごとの流れ</a></li>
+  <li><a href="#timeline">1日の時間割</a></li>
+  <li><a href="#repos">リポジトリの中身</a></li>
+  <li><a href="#kpi">数字の在りか（KPI 30本）</a></li>
+  <li><a href="#ledgers">台帳と資料の在りか</a></li>
+  <li><a href="#issues">分かった課題</a></li>
+</ul>
+
+<h2 id="overview">1. 全体像：入口 → 台帳 → 自動化 → 見る場所</h2>
+<p>横の1行が1つの入り口。左から右へ、人が書いた台帳をスクリプトが読み、Addness と GitHub Pages に数字を書く。点線の箱は池田さんのMacでしか動かない部分。</p>
+<figure>
+<svg viewBox="0 0 1240 470" role="img" aria-label="4つの入り口ごとに、台帳、自動化スクリプト、数字を見る場所がどうつながっているかの図。自動化の多くはMacのcronに依存している。">
+<defs>
+  <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+</defs>
+<g font-family="BIZ UDPGothic, Hiragino Sans, sans-serif" font-size="12" fill="currentColor">
+  <!-- 列見出し -->
+  <g font-weight="700" font-size="13">
+    <text x="130" y="28" text-anchor="middle">入口（お客さんが来る所）</text>
+    <text x="430" y="28" text-anchor="middle">台帳（人が書く正本）</text>
+    <text x="730" y="28" text-anchor="middle">自動化（読んで集計する）</text>
+    <text x="1030" y="28" text-anchor="middle">見る場所（数字・通知）</text>
+  </g>
+  <!-- 列の矢印ラベル -->
+  <g font-size="11" fill="currentColor" opacity=".75">
+    <text x="280" y="22" text-anchor="middle">人が記録</text>
+    <text x="580" y="22" text-anchor="middle">読む</text>
+    <text x="880" y="22" text-anchor="middle">書く</text>
+  </g>
+
+  <!-- 行1 クラウドワークス  y=50..122 -->
+  <rect x="20" y="50" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="130" y="72" text-anchor="middle" font-weight="700">クラウドワークス</text>
+  <text x="130" y="90" text-anchor="middle">案件募集 → 応募者と面談</text>
+  <text x="130" y="108" text-anchor="middle">月商700万はすべてここ</text>
+
+  <rect x="320" y="50" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="430" y="72" text-anchor="middle" font-weight="700">AGシート（月ごと）</text>
+  <text x="430" y="90" text-anchor="middle">営業(CWトスアップ)・契約者タブ</text>
+  <text x="430" y="108" text-anchor="middle">Google Drive／別の人が持ち主</text>
+
+  <rect x="620" y="50" width="220" height="72" rx="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="730" y="72" text-anchor="middle" font-weight="700">kpi-dashboard</text>
+  <text x="730" y="90" text-anchor="middle">sales_kpi_export.py</text>
+  <text x="730" y="108" text-anchor="middle">Macで更新→Pagesへpush</text>
+
+  <rect x="920" y="50" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="1030" y="72" text-anchor="middle" font-weight="700">Addness 営業/CW（10本）</text>
+  <text x="1030" y="90" text-anchor="middle">CW営業 週次ダッシュボード</text>
+  <text x="1030" y="108" text-anchor="middle">Pages: sales/「売上と歩留まり」</text>
+
+  <!-- 行2 Threads 案件掲載 y=140..212 -->
+  <rect x="20" y="140" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="130" y="162" text-anchor="middle" font-weight="700">Threads 案件掲載</text>
+  <text x="130" y="180" text-anchor="middle">27アカウント・1日2投稿</text>
+  <text x="130" y="198" text-anchor="middle">DM → LINE → TimeRex → 面談</text>
+
+  <rect x="320" y="140" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="430" y="162" text-anchor="middle" font-weight="700">Notion 投稿表（17人）</text>
+  <text x="430" y="180" text-anchor="middle">AGシート 営業(threads)タブ</text>
+  <text x="430" y="198" text-anchor="middle">ご説明用公式LINE（@123evczy）</text>
+
+  <rect x="620" y="140" width="220" height="72" rx="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="730" y="162" text-anchor="middle" font-weight="700">threads-actions</text>
+  <text x="730" y="180" text-anchor="middle">文面づくり annken_draft（Mac cron）</text>
+  <text x="730" y="198" text-anchor="middle">投稿 post_all（Actions 15分おき）</text>
+
+  <rect x="920" y="140" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="1030" y="162" text-anchor="middle" font-weight="700">Addness threads 契約数（1本）</text>
+  <text x="1030" y="180" text-anchor="middle">Pages: annken/ 案件掲載ダッシュボード</text>
+  <text x="1030" y="198" text-anchor="middle">公式LINEへ通知（池田さん）</text>
+
+  <!-- 行3 Threads 属人 y=230..302 -->
+  <rect x="20" y="230" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="130" y="252" text-anchor="middle" font-weight="700">Threads 属人「いけ」</text>
+  <text x="130" y="270" text-anchor="middle">@cw_uragawa・1日5本</text>
+  <text x="130" y="288" text-anchor="middle">投稿 → note → LINE → 相談</text>
+
+  <rect x="320" y="230" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="430" y="252" text-anchor="middle" font-weight="700">Notion SNS投稿ログ・note 2本</text>
+  <text x="430" y="270" text-anchor="middle">公式LINE「いけ」・3分チェック</text>
+  <text x="430" y="288" text-anchor="middle">【いけ】面談・成約シート</text>
+
+  <rect x="620" y="230" width="220" height="72" rx="6" fill="none" stroke="#2f7d4f" stroke-width="2"/>
+  <text x="730" y="252" text-anchor="middle" font-weight="700">毎朝9:47 Claude Code ルーティン</text>
+  <text x="730" y="270" text-anchor="middle">ike_kpi_export / note_stats（-------）</text>
+  <text x="730" y="288" text-anchor="middle">kpi_data_A.json（Mac 8分おき）を読む</text>
+
+  <rect x="920" y="230" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="1030" y="252" text-anchor="middle" font-weight="700">Addness 営業/threads属人（11本）</text>
+  <text x="1030" y="270" text-anchor="middle">いけ 属人ルート 毎日ダッシュボード</text>
+  <text x="1030" y="288" text-anchor="middle">Pages: Threads運用／note／funnel</text>
+
+  <!-- 行4 インスタ y=320..392 -->
+  <rect x="20" y="320" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="130" y="342" text-anchor="middle" font-weight="700">Instagram インフルエンサー</text>
+  <text x="130" y="360" text-anchor="middle">DM → 提携面談 → 提携決定</text>
+  <text x="130" y="378" text-anchor="middle">提携先のフォロワーに販売</text>
+
+  <rect x="320" y="320" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="430" y="342" text-anchor="middle" font-weight="700">Instagram DM管理（担当×月）</text>
+  <text x="430" y="360" text-anchor="middle">AGシート インフルエンサーDMタブ</text>
+  <text x="430" y="378" text-anchor="middle">インフルエンサー営業数値（月ごと）</text>
+
+  <rect x="620" y="320" width="220" height="72" rx="6" fill="none" stroke="#8a3b6b" stroke-width="2"/>
+  <text x="730" y="342" text-anchor="middle" font-weight="700">------- insta_kpi_export.py</text>
+  <text x="730" y="360" text-anchor="middle">人が xlsx を渡して手で動かす</text>
+  <text x="730" y="378" text-anchor="middle">DM稼働量は kpi-dashboard dm_export</text>
+
+  <rect x="920" y="320" width="220" height="72" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="1030" y="342" text-anchor="middle" font-weight="700">Addness 営業/インスタ（8本）</text>
+  <text x="1030" y="360" text-anchor="middle">インスタインフルエンサー 週次DB</text>
+  <text x="1030" y="378" text-anchor="middle">Pages: dm/ DM稼働量</text>
+
+  <!-- 矢印（行ごと） -->
+  <g stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#arw)">
+    <line x1="242" y1="86" x2="316" y2="86"/><line x1="542" y1="86" x2="616" y2="86"/><line x1="842" y1="86" x2="916" y2="86"/>
+    <line x1="242" y1="176" x2="316" y2="176"/><line x1="542" y1="176" x2="616" y2="176"/><line x1="842" y1="176" x2="916" y2="176"/>
+    <line x1="242" y1="266" x2="316" y2="266"/><line x1="542" y1="266" x2="616" y2="266"/><line x1="842" y1="266" x2="916" y2="266"/>
+    <line x1="242" y1="356" x2="316" y2="356"/><line x1="542" y1="356" x2="616" y2="356"/><line x1="842" y1="356" x2="916" y2="356"/>
+  </g>
+  <!-- 案件掲載の投稿は自動化→入口へ戻る（投稿する） -->
+  <path d="M620,205 C560,215 300,215 240,205" stroke="#1f7a8c" stroke-width="1.5" fill="none" marker-end="url(#arw)"/>
+  <text x="430" y="226" text-anchor="middle" font-size="11" fill="#1f7a8c">Threads APIで予約投稿（Actions）／属人「いけ」のA も同じ仕組み</text>
+
+  <!-- 下の帯：Addness ゴール -->
+  <rect x="20" y="412" width="1120" height="44" rx="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 3"/>
+  <text x="580" y="430" text-anchor="middle" font-weight="700">Addness ゴールツリー「1年後までに月商3000万」（23ゴール）</text>
+  <text x="580" y="447" text-anchor="middle" font-size="11">決めたこと・調べたこと・毎朝の数字は各ゴールの本文に書かれ、KPIはゴールに結びつく（KPIツリーは未作成）</text>
+</g>
+</svg>
+<figcaption>横1行が1つの入り口。Mac依存（点線・橙）は、クラウドワークスの集計、案件掲載の文面づくり、属人アカウントのメトリクス同期。インスタ（紫）は人が手で動かす。</figcaption>
+<div class="legend"><span class="k-actions">GitHub Actions（クラウド）</span><span class="k-mac">池田さんのMac（cron）</span><span class="k-ai">Claude Code ルーティン</span><span class="k-manual">人が手で動かす</span></div>
+</figure>
+
+<h2 id="flows">2. 入口ごとの流れと、数字の取り方</h2>
+<div class="grid">
+  <div class="card"><h3>① クラウドワークス（月700万）</h3>
+    <ul>
+      <li>流れ：案件募集 → 応募者と個別面談（トスアップ面談。担当は池田・藤原・谷村ほか）→ クローザーアポ → プレ → 契約</li>
+      <li>記録：AGシート「営業(CWトスアップ)」（1件1行）と「契約者」タブ。月が替わるとファイルが新しくなる</li>
+      <li>9月：着座332 → 見込み内140 → クローザーアポ71 → 契約10件・売上643.5万</li>
+      <li>数字：Addness 営業/CW 10本（アポ取り・着座・トスアップ・プレ・契約・売上・飛び・成約率・プレ成約率・平均単価）。数え方の正は kpi-dashboard の <code>sales_kpi_export.py</code></li>
+      <li>自動化：Pages「売上と歩留まり」はMacが更新。Addnessへは毎朝（10/4は8:55）入っているが、率・平均単価の2本は10/4に未到着</li>
+    </ul></div>
+  <div class="card"><h3>② Threads 案件掲載（目標1000万・いま0）</h3>
+    <ul>
+      <li>流れ：27アカウントが毎日2本「案件募集」を投稿 → 応募DM（マーケ担当が返す）→ アンケート → スクリーニング → ご説明用公式LINE → TimeRex で日程 → AGシート「営業(threads)」に記入 → トスアップ面談 → 以後はCWと同じ</li>
+      <li>投稿づくり：Macのcronが 18:30・19:05・20:05 に <code>annken_draft.py</code>（ジャンル・型・時刻を決めてNotionに予約）。予備としてActionsが 19:30・20:30・21:30 にも走る</li>
+      <li>投稿：Actionsの <code>post_all.py</code> がNotionの予約を読み、Threads APIで公開（7時・12時・21〜23時台は15分おき）</li>
+      <li>見張り：Mac側で 20時アラート・夜の二重投稿チェック・完了通知を公式LINEへ（池田さん宛）</li>
+      <li>9月：アポ取り39 → 着座17（見込み内4）→ 契約0。表示は9/18以降に大きく落ち、10/4夜から新しい型と時間で対策</li>
+      <li>数字：Pages「案件掲載ダッシュボード」はNotion投稿表から。Addnessには「threads 契約数」1本だけ。マーケ別のアポ→契約はまだ入っていない（子ゴールあり）</li>
+    </ul></div>
+  <div class="card"><h3>③ Threads 属人「いけ」（目標はThreads合計で1000万）</h3>
+    <ul>
+      <li>流れ：池田さんがClaude Codeで投稿を作る → Notion「SNS投稿ログ CW裏側」→ Actionsが自動投稿（キーA）→ note記事2本 → 公式LINE「いけ」→ 3分チェック／「相談」→ TimeRex → 面談（池田さん本人）→ 成約</li>
+      <li>いま：フォロワー331、note閲覧累計323、LINE友だち8（届く6）、相談0・面談0・成約0</li>
+      <li>記録：面談・成約は「【いけ】属人ルート 面談・成約」シートに1人1行。3分チェックはAddnessフォーム（GAS版・LIFF版は未デプロイ）</li>
+      <li>数字：Addness 営業/threads属人 11本。毎朝9:47のClaude Codeルーティンが kpi-dashboard の JSON と note（Cookieでログイン）とシートを読んで入れ、ゴール本文の末尾に「昨日の数字」を1行書く</li>
+      <li>元データ：<code>kpi_data_A.json</code>（Macが約8分おき）、<code>line/line_A.json</code>（Actions 毎朝8:05）、<code>funnel_A.json</code>（手入力・9/29で停止）</li>
+    </ul></div>
+  <div class="card"><h3>④ Instagram インフルエンサー（目標1000万・いま0）</h3>
+    <ul>
+      <li>流れ：担当（池田・松本・谷村）がインフルエンサーにDM → 返信 → 提携面談（AGシート「インフルエンサーDM」タブ）→ 提携決定 → 提携先のフォロワーにアポ → 着座 → 契約（「インフルエンサー営業数値」営業・契約者タブ）</li>
+      <li>実績：7月に1件66万（あおぴん経由）。8・9月は0</li>
+      <li>数字：Addness 営業/インスタ 8本（DM送信・返信・提携面談着席・提携決定・アポ・着座・契約・売上）。<code>scripts/insta_kpi_export.py</code>（このリポジトリ）が xlsx を読んで点を作る</li>
+      <li>自動化：まだ無い。最後の取り込みは9/30分まで（10/1に手で実行）。10/4朝の期限に届かず、8本とも stale</li>
+      <li>DM稼働量（Pages dm/）は kpi-dashboard の <code>dm_export.py</code> がシートを gviz で読む。月が替わるたびにシートIDを足す必要がある</li>
+    </ul></div>
+</div>
+
+<h2 id="timeline">3. 1日の時間割（日本時間）</h2>
+<p>いつ・どこで・何が動くか。橙の点線はMacが起きていないと動かない。</p>
+<figure>
+<svg viewBox="0 0 1240 520" role="img" aria-label="0時から24時までの時間軸に、自動投稿、トークン更新、KPI更新、投稿づくり、見張りの実行時刻を並べた図。Macのcronで動くものは夕方から夜に集中している。">
+<defs>
+  <marker id="arw2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+</defs>
+<g font-family="BIZ UDPGothic, Hiragino Sans, sans-serif" font-size="12" fill="currentColor">
+  <!-- 軸: x = 300 + h*38 (0h..24h → 300..1212) -->
+  <g stroke="currentColor" stroke-opacity=".25" stroke-width="1">
+    <line x1="300" y1="40" x2="300" y2="470"/><line x1="376" y1="40" x2="376" y2="470"/><line x1="452" y1="40" x2="452" y2="470"/><line x1="528" y1="40" x2="528" y2="470"/><line x1="604" y1="40" x2="604" y2="470"/><line x1="680" y1="40" x2="680" y2="470"/><line x1="756" y1="40" x2="756" y2="470"/><line x1="832" y1="40" x2="832" y2="470"/><line x1="908" y1="40" x2="908" y2="470"/><line x1="984" y1="40" x2="984" y2="470"/><line x1="1060" y1="40" x2="1060" y2="470"/><line x1="1136" y1="40" x2="1136" y2="470"/><line x1="1212" y1="40" x2="1212" y2="470"/>
+  </g>
+  <g font-size="11" text-anchor="middle" opacity=".8">
+    <text x="300" y="32">0時</text><text x="376" y="32">2</text><text x="452" y="32">4</text><text x="528" y="32">6</text><text x="604" y="32">8</text><text x="680" y="32">10</text><text x="756" y="32">12</text><text x="832" y="32">14</text><text x="908" y="32">16</text><text x="984" y="32">18</text><text x="1060" y="32">20</text><text x="1136" y="32">22</text><text x="1212" y="32">24時</text>
+  </g>
+
+  <!-- 行ラベル x=20..290, 行の y 中心 -->
+  <!-- 1 予約投稿 (Actions) y=60 -->
+  <text x="20" y="64" font-weight="700" fill="#1f7a8c">Threads 予約投稿</text><text x="20" y="80" font-size="11">threads-actions post_all（Actions）</text>
+  <g fill="#1f7a8c">
+    <!-- 7:00-7:45 -->
+    <rect x="566" y="54" width="29" height="12" rx="2"/>
+    <!-- 12:00-12:45 -->
+    <rect x="756" y="54" width="29" height="12" rx="2"/>
+    <!-- 21:00-23:45 -->
+    <rect x="1098" y="54" width="111" height="12" rx="2"/>
+    <!-- 毎時5分 8..23 -->
+    <circle cx="607" cy="60" r="2.5"/><circle cx="645" cy="60" r="2.5"/><circle cx="683" cy="60" r="2.5"/><circle cx="721" cy="60" r="2.5"/><circle cx="797" cy="60" r="2.5"/><circle cx="835" cy="60" r="2.5"/><circle cx="873" cy="60" r="2.5"/><circle cx="911" cy="60" r="2.5"/><circle cx="949" cy="60" r="2.5"/><circle cx="987" cy="60" r="2.5"/><circle cx="1025" cy="60" r="2.5"/><circle cx="1063" cy="60" r="2.5"/>
+  </g>
+  <text x="640" y="80" font-size="10" fill="#1f7a8c">7時・12時・21〜23時台は15分おき、8〜23時は毎時5分に補完</text>
+
+  <!-- 2 トークン更新 10:00 -->
+  <text x="20" y="110" font-weight="700" fill="#1f7a8c">Threads トークン更新</text><text x="20" y="126" font-size="11">refresh_all（Actions・7日ごと）</text>
+  <circle cx="680" cy="108" r="6" fill="#1f7a8c"/><text x="692" y="112" font-size="11">10:00</text>
+
+  <!-- 3 LINE友だち数 8:05 -->
+  <text x="20" y="156" font-weight="700" fill="#1f7a8c">公式LINE 友だち数</text><text x="20" y="172" font-size="11">kpi-dashboard line_insight（Actions）</text>
+  <circle cx="607" cy="154" r="6" fill="#1f7a8c"/><text x="619" y="158" font-size="11">8:05 → line_A.json</text>
+
+  <!-- 4 Claude Code 朝 -->
+  <text x="20" y="202" font-weight="700" fill="#2f7d4f">Addness へ数字を入れる</text><text x="20" y="218" font-size="11">Claude Code ルーティン</text>
+  <circle cx="632" cy="200" r="6" fill="#2f7d4f"/><text x="644" y="196" font-size="11">8:45 案件掲載 日次レポート</text>
+  <circle cx="638" cy="200" r="6" fill="#2f7d4f" opacity=".6"/><text x="644" y="210" font-size="11">8:55ごろ CW 10本　9:47 いけ 11本</text>
+
+  <!-- 5 ダッシュボード更新 (Mac) 常時 -->
+  <text x="20" y="248" font-weight="700" fill="#b86a00">Pages ダッシュボード更新</text><text x="20" y="264" font-size="11">kpi-dashboard（Mac・数分おき）</text>
+  <rect x="300" y="242" width="912" height="10" rx="2" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="640" y="266" font-size="10" fill="#b86a00">DM稼働量・案件掲載・売上を集計してpush（Actions版 dashboards.yml は止めてある）</text>
+
+  <!-- 6 Threads メトリクス同期 (Mac) 8分おき -->
+  <text x="20" y="294" font-weight="700" fill="#b86a00">Threads 表示回数の同期</text><text x="20" y="310" font-size="11">kpi_data_A/B.json（Mac・約8分おき）</text>
+  <rect x="300" y="288" width="912" height="10" rx="2" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="6 4"/>
+
+  <!-- 7 投稿づくり (Mac 18:30/19:05/20:05) + 予備 Actions 19:30/20:30/21:30 -->
+  <text x="20" y="340" font-weight="700" fill="#b86a00">案件掲載 投稿づくり</text><text x="20" y="356" font-size="11">annken_draft（Mac cron）＋予備（Actions）</text>
+  <circle cx="996" cy="338" r="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="3 2"/>
+  <circle cx="1003" cy="338" r="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="3 2"/>
+  <circle cx="1022" cy="338" r="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="3 2"/>
+  <circle cx="1041" cy="338" r="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="3 2"/>
+  <circle cx="1041" cy="352" r="5" fill="#1f7a8c"/><circle cx="1079" cy="352" r="5" fill="#1f7a8c"/><circle cx="1117" cy="352" r="5" fill="#1f7a8c"/>
+  <text x="975" y="342" text-anchor="end" font-size="10" fill="#b86a00">18:20 リサーチ／18:30・19:05・20:05</text>
+  <text x="975" y="356" text-anchor="end" font-size="10" fill="#1f7a8c">予備 19:30・20:30・21:30</text>
+
+  <!-- 8 見張り (Mac) 20:00 アラート, 5分おき完了通知, 夜チェック -->
+  <text x="20" y="386" font-weight="700" fill="#b86a00">案件掲載の見張り → 公式LINEへ</text><text x="20" y="402" font-size="11">annken_alert／done／check（Mac）</text>
+  <circle cx="1060" cy="384" r="6" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="3 2"/><text x="1070" y="388" font-size="10" fill="#b86a00">20:00 未投稿アラート</text>
+  <rect x="984" y="394" width="228" height="8" rx="2" fill="none" stroke="#b86a00" stroke-width="2" stroke-dasharray="6 4"/><text x="975" y="402" text-anchor="end" font-size="10" fill="#b86a00">5分おきに「全部出た」通知・夜に二重投稿チェック</text>
+
+  <!-- 9 インスタ（手動） -->
+  <text x="20" y="440" font-weight="700" fill="#8a3b6b">インスタ KPI → Addness</text><text x="20" y="456" font-size="11">insta_kpi_export（人が手で）</text>
+  <text x="300" y="444" font-size="11" fill="#8a3b6b">決まった時刻なし。最後は10/1（9/30分まで）。Addnessの期限は毎朝10:00（10/4は未到着）</text>
+
+  <!-- Mac依存の帯 -->
+  <text x="20" y="494" font-size="11" opacity=".8">※ Macが寝ている日は、橙の行がすべて止まる。9/22の二重投稿は、Macと予備のActionsが同じ日の予約を二重に作ったことが原因。</text>
+</g>
+</svg>
+<figcaption>GitHub Actions は朝と夜の投稿・更新に集中。昼間の集計と夕方の投稿づくり、夜の見張りはMacの cron に乗っている。</figcaption>
+<div class="legend"><span class="k-actions">GitHub Actions</span><span class="k-mac">Mac の cron</span><span class="k-ai">Claude Code ルーティン</span><span class="k-manual">人が手で動かす</span></div>
+</figure>
+
+<h2 id="repos">4. リポジトリの中身</h2>
+<div class="tbl"><table>
+<thead><tr><th>リポジトリ</th><th>役割</th><th>主なファイル</th><th>動く場所</th><th>秘密情報の置き場</th></tr></thead>
+<tbody>
+<tr><td><b>kazuki0806/threads-actions</b><br><span class="small">29ファイル・非公開</span></td>
+<td>Threadsの予約投稿・トークン更新・案件掲載の文面づくり・見張り。41アカウント登録（有効37）</td>
+<td><code>post_all.py</code> 投稿／<code>refresh_all.py</code> トークン／<code>annken_draft.py</code> 文面づくり（型・ジャンルは <code>annken_auto/*.json</code>）／<code>annken_check.py</code>・<code>annken_alert.py</code>・<code>annken_done.py</code> 見張り／<code>notify_scheduled.py</code>・<code>notify_sales.py</code> 予約の通知／<code>accounts.json</code> 一覧／<code>README.md</code>・<code>PLAYBOOK.md</code> 設計の説明</td>
+<td><span class="pill actions">Actions</span> post.yml・refresh-token.yml・draft.yml（予備）<br><span class="pill mac">Mac</span> 文面づくり本番・見張り・LINE通知</td>
+<td><code>secrets.enc</code>（AES暗号化。鍵はSecrets <code>SECRETS_KEY</code>）。書くのは refresh_all だけ。LINEトークンはMacの <code>line-threads/.env</code></td></tr>
+<tr><td><b>kazuki0806/kpi-dashboard</b><br><span class="small">66ファイル・公開（GitHub Pages）</span></td>
+<td>数字を集めて静的ダッシュボードとして公開。Addness のKPIの元データ置き場でもある</td>
+<td>ページ：<code>index.html</code> Threads運用／<code>annken/</code> 案件掲載／<code>dm/</code> DM稼働量／<code>sales/</code> 売上と歩留まり／<code>note/</code>／<code>funnel/</code>／<code>marke/</code> マーケ採用／<code>saiyou/</code>／<code>check/</code> 3分チェック(LIFF)<br>スクリプト：<code>sales_kpi_export.py</code>・<code>dm_export.py</code>・<code>annken_export.py</code>・<code>line_insight.py</code>・<code>line_test.py</code>／<code>line/gas_check.gs</code>（LINEトーク内3分チェック・未デプロイ）</td>
+<td><span class="pill mac">Mac</span> 集計とpush（commit者 kazuki0806）<br><span class="pill actions">Actions</span> line_insight.yml（毎朝）・line_test.yml（手動）。dashboards.yml（5分おき）は停止中</td>
+<td>Secrets：<code>SHEETS_JSON</code>（シートID一覧）・<code>ANNKEN_ENV</code>（NotionトークンとDB ID）・<code>LINE_TOKEN_A</code></td></tr>
+<tr><td><b>kazuki0806/-------</b><br><span class="small">このリポジトリ・5ブランチ、main無し</span></td>
+<td>AddnessのKPIに点を入れるスクリプトと、池田さんと働く決まり（CLAUDE.md）</td>
+<td><code>scripts/insta_kpi_export.py</code>（インスタ8本）／<code>scripts/ike_kpi_export.py</code>（いけ11本）／<code>scripts/note_stats.py</code>（noteにログイン）／<code>scripts/obsidian_vault_*.sh</code>（使わないことに決定）／<code>thumbnails/</code> LINE導線のサムネ／<code>CLAUDE.md</code></td>
+<td><span class="pill ai">Claude Code</span> 毎朝のルーティンが別の会話で実行<br><span class="pill manual">手動</span> インスタ</td>
+<td>noteのCookie（<code>NOTE_SESSION</code>）は会話の環境変数。シートは xlsx を渡す</td></tr>
+</tbody></table></div>
+<p class="note">ブランチ：charming-noether（この作業）／brave-edison（いけ・note・サムネ・CLAUDE.md）／amazing-allen（Obsidian同期）／addness-goal-brainstorm／addness-insta-influencer-goal。どれも main にまとまっていない。</p>
+
+<h2 id="kpi">5. 数字の在りか（Addness KPI 30本）</h2>
+<div class="tbl"><table>
+<thead><tr><th>フォルダ</th><th>本数</th><th>元データ</th><th>入れる仕組み</th><th>10/4 時点の鮮度</th><th>ダッシュボード</th></tr></thead>
+<tbody>
+<tr><td>営業/CW</td><td class="num">10</td><td>AGシート 営業(CWトスアップ)・契約者</td><td><span class="pill ai">Claude Code</span> 毎朝（sales_kpi_export.py の数え方）</td><td class="warn">8本は10/2分まで（stale）。平均単価・プレ成約率は10/4に未到着</td><td>CW営業 週次ダッシュボード</td></tr>
+<tr><td>営業/threads</td><td class="num">1</td><td>AGシート 契約者（種別 threads）</td><td><span class="pill ai">Claude Code</span> 毎朝</td><td class="warn">10/2分まで。契約は7月から0</td><td>CW営業DBの末尾に1枚</td></tr>
+<tr><td>営業/threads属人</td><td class="num">11</td><td>kpi_data_A.json・line_A.json・note（Cookie）・Addnessフォーム・面談シート</td><td><span class="pill ai">Claude Code</span> 毎朝9:47（ike_kpi_export.py）</td><td class="ok">9本は10/3分まで fresh。LINE 2本は10/2分（Actions 8:05の後に取る必要）</td><td>いけ 属人ルート 毎日ダッシュボード</td></tr>
+<tr><td>営業/インスタ</td><td class="num">8</td><td>DM管理シート（担当×月）・AGシート インフルエンサーDM・インフルエンサー営業数値</td><td><span class="pill manual">手動</span> insta_kpi_export.py に xlsx を渡す</td><td class="bad">9/30分まで。10/4朝の期限に未到着（8本すべて stale）</td><td>インスタインフルエンサー 週次ダッシュボード</td></tr>
+</tbody></table></div>
+<p class="note">KPIツリーは未作成（30本すべて未配置）。ゴールに結びついているのは「threads 契約数」と「いけ」の11本だけで、CW・インスタの18本はどのゴールにも結びついていない。</p>
+
+<h2 id="ledgers">6. 台帳と資料の在りか</h2>
+<div class="grid">
+  <div class="card"><h3>Google Drive（シート）</h3><ul>
+    <li><a href="https://docs.google.com/spreadsheets/d/1hQumkp2ICnDhc0wBpSOvVTIkoXeWnB2l3W8hVDeczxE/edit">【Kir】AGシート（2026年10月）</a>：顧客台帳の正本。月ごとにファイルが変わる（持ち主は別のメンバー）。タブ：営業(CWトスアップ)・営業(threads)・契約者・インフルエンサーDM・集計</li>
+    <li>Instagram DM管理 池田／松本（10月）、原本：担当×月で1ファイル。日付タブ1〜31</li>
+    <li><a href="https://docs.google.com/spreadsheets/d/1ofNHinvO5u7ZwLWyd3SVX2v2uzgSCMBSiGFeYNGo8ro/edit">【Kir】インフルエンサー営業数値（2026年9月）</a>：提携先経由の販売台帳</li>
+    <li><a href="https://docs.google.com/spreadsheets/d/1CRru7pmerxHiIB5Dmf0cLthamWKJDIQ1O2ruC45MNB8/edit">【いけ】属人ルート 面談・成約</a>：池田さんが1人1行で書く</li>
+    <li>LINEナレッジ_ログ／【kir】CWマーケ部隊・インフルエンサーDMアポ・threads案件掲載（月ごとのGoogleドキュメント）：LINEグループのトークをBotが写したもの</li>
+    <li>Obsidian Vault（マイドライブにミラー）→ 池田業務/Threads：Threads知識ベース・分析ログ・運用ハンドブック</li>
+  </ul></div>
+  <div class="card"><h3>Notion</h3><ul>
+    <li><a href="https://app.notion.com/p/3d8b9ba8cb15805dacbbd552904c7542">案件掲載 アポ取りマニュアル（Threads）</a>：DM → アンケート → スクリーニング → LINE → TimeRex の手順</li>
+    <li>threads 案件掲載 ○○（17人分のページ、1アカウント1表）：自動投稿の予約と投稿済みの印。ダッシュボードの元</li>
+    <li><a href="https://app.notion.com/p/382b9ba8cb158044a403e91dd5794242">SNS投稿ログ CW裏側</a>／駆け込み寺／採用・人材（松本・一條・後藤・高木・東・小野田）</li>
+    <li>3分チェック・特典「Claude Code×高単価クライアントワーク攻略」（下書き）、Threads知識ベース（9/8版）</li>
+  </ul></div>
+  <div class="card"><h3>Addness</h3><ul>
+    <li>ゴールツリー「1年後までに月商3000万」：Threads（子12件）・CW・インフルエンサー・社内のシステム作り</li>
+    <li>ダッシュボード3枚：<a href="https://www.addness.com/analytics/dashboards/2fe773db-6f0f-4bf8-82a9-5fa990676ba5">CW営業 週次</a>／<a href="https://www.addness.com/analytics/dashboards/a835c00f-97d7-421b-ab53-19b8ade1c3f0">インスタインフルエンサー 週次</a>／<a href="https://www.addness.com/analytics/dashboards/cb319527-5afc-410f-8f09-9489e2e0ddc2">いけ 属人ルート 毎日</a></li>
+    <li>フォーム：【3分チェック】（公開中・回答1件は池田さんの試し）</li>
+    <li>ナレッジ1件：「AIでアナリティクスのKPIに日ごとの数字を入れる（証憑の区切り方つき）」</li>
+    <li>CRM（顧客リスト）：未使用。顧客はAGシートにいる</li>
+    <li>メンバー：池田さん1人（ほかのメンバーは招待しない方針）</li>
+  </ul></div>
+  <div class="card"><h3>外のサービス</h3><ul>
+    <li>Threads API（graph.threads.net）：投稿・インサイト。長期トークンは60日で切れる</li>
+    <li>LINE公式アカウント ×3：ご説明用（案件掲載）・「いけ」（属人）・Kir営業（通知用）。Messaging API のトークンはそれぞれ別の場所</li>
+    <li>TimeRex：面談の日程調整（案件掲載用と「いけ」用）</li>
+    <li>note：記事2本（8/23・9/22）。閲覧数はログインしないと取れない</li>
+    <li>GAS：LINEナレッジ保存Bot・ご説明用LINEのあいさつカード（Drive上）。3分チェックのGASは未デプロイ</li>
+    <li>Googleカレンダー：面談予定（9月79件）。Zoomの録画がDriveの Documents/Zoom に自動保存</li>
+  </ul></div>
+</div>
+
+<h2 id="issues">7. 読み取って分かった課題（理想を決める材料）</h2>
+<ol class="issues">
+  <li><b>Mac依存が大きい。</b>投稿づくりの本番・Threadsの表示回数の同期・Pagesダッシュボードの更新・案件掲載の見張りとLINE通知は、池田さんのMacが起きていないと止まる。9/22の二重投稿も、Macと予備のActionsの重なりが原因だった。</li>
+  <li><b>インスタの数字は自動で入っていない。</b>8本すべてが人の手で、10/4朝の期限に届かず stale。月ごとに変わるシートIDも人が足している。</li>
+  <li><b>案件掲載のファネルがAddnessにない。</b>Threadsで入っているのは契約数1本だけ。マーケ別のアポ取り・飛び・着座・見込み外は、AGシートを人が1行ずつ数えている状態（子ゴールは作ってある）。</li>
+  <li><b>同じ数字を2か所で数えている。</b>kpi-dashboard（Pages）とAddnessに、同じ元データから別々に点を作っている。数え方の正はスクリプトだと決めてあるが、ダッシュボードとAGシートで着座の数え方が違う例がある。</li>
+  <li><b>KPIツリーが無い。</b>30本が未配置で、売上 → 契約 → 着座 → アポの上下関係がAddness上で見えない。CW・インスタの18本はゴールにも結びついていない。</li>
+  <li><b>AGシートの集計式が壊れている。</b>マーケ集計(threads)は5月の式のまま、集計(threads)の契約数は常に0、データタブのスクリプト設定が列と合っていない。</li>
+  <li><b>秘密情報の扱い。</b>LINEグループに書かれたパスワードがDriveの文書に写っている。LINEのトークンはMacの .env、GitHub Secrets、GASのプロパティに分散している。</li>
+  <li><b>手入力で止まっている数字。</b>funnel_A.json（プロフィールアクセス・noteへのクリック）は9/29で停止。note閲覧はCookieが切れると止まる。</li>
+  <li><b>------- が5ブランチに散らばっている。</b>main が無く、どのブランチが正か分からない。毎朝のルーティンは brave-edison を使っている。</li>
+  <li><b>AI用のまとまった地図が無かった。</b>仕組みの説明は各ゴール本文・README・PLAYBOOK・スクリプトのdocstringに分散している（この図がその代わりになる）。</li>
+</ol>
+<p class="note">この図は Addness のゴール「社内のシステム作り」の本文と、GitHub kazuki0806/------- の docs/system_map.html にも置いてある。</p>
+</div>
