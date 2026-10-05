@@ -39,14 +39,14 @@ crontab -l > "$DST/crontab_now.txt" 2>/dev/null || echo "# crontab は空です"
 { echo "# $(date '+%Y-%m-%d %H:%M') の時点で、業務フォルダの外にあるLINE関係のファイル（中身は入れない）";
   ls -la "$HOME/claude code/line-threads" 2>/dev/null; ls -la "$HOME/業務/line-sales" 2>/dev/null; } > "$DST/line_env_files.txt"
 
-# 3. 秘密情報らしき文字列が残っていないかを調べる（見つかったら止める）
+# 3. 秘密情報らしき文字列が残っているファイルは入れない（飛ばして続ける）
 # 「値そのもの」だけを探す。キー名だけ（トークンを読むコードや .env の雛形）には反応しない。
 HITS=$(grep -rIl -E 'LINE_CHANNEL_ACCESS_TOKEN=[A-Za-z0-9+/=_-]{40,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-ant-[A-Za-z0-9_-]{30,}|AIza[0-9A-Za-z_-]{30,}|secret_[A-Za-z0-9]{40,}|ntn_[A-Za-z0-9]{40,}|"(password|pass|パスワード)"\s*:\s*"[^"]{6,}"' "$DST" 2>/dev/null | grep -v '/.git/' | grep -vE '\.(example|template|md)$' | head -50)
 if [ -n "$HITS" ]; then
-  echo "★ 秘密情報らしき文字列が残っているファイルがあります。push を止めました。"
+  echo "★ 秘密情報らしき文字列があるファイルは入れずに飛ばします（一覧は skipped_secrets.txt に残す）:"
   echo "$HITS"
-  echo "そのファイルを除外する場合は、rsync の --exclude に足してください。問題なければ FORCE=1 を付けて実行してください。"
-  [ "${FORCE:-0}" = "1" ] || exit 2
+  echo "$HITS" | sed "s|^$DST/||" > "$DST/skipped_secrets.txt"
+  echo "$HITS" | while IFS= read -r f; do [ -n "$f" ] && rm -f "$f"; done
 fi
 
 echo "== 入るファイルの数: $(find "$DST" -type f -not -path '*/.git/*' | wc -l | tr -d ' ')  サイズ: $(du -sh "$DST" | cut -f1)"
