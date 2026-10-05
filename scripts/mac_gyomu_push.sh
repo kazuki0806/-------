@@ -8,6 +8,7 @@
 # 入れないもの：.env・鍵・トークン・パスワード台帳（roster.json、cwログパス台帳）・codes.json・
 #              node_modules・ログ・バックアップ・動画など。
 # 入れるもの：スクリプト・設定・マニュアル・crontab の内容（crontab -l の結果を crontab_now.txt に書く）。
+#            threads_actions の history.json・post_log.txt など、Macにしか無い状態ファイルも入れる（.git は入れない）。
 set -u
 SRC="${GYOMU_DIR:-$HOME/業務}"
 DST="${GYOMU_EXPORT:-$HOME/業務_export}"
@@ -27,7 +28,7 @@ rsync -a --delete \
   --exclude 'credentials*.json' --exclude 'client_secret*.json' --exclude 'service_account*.json' \
   --exclude '*.log' --exclude '*.tgz' --exclude '*.zip' --exclude '*.tar' --exclude '*.tar.gz' \
   --exclude '*.mp4' --exclude '*.mov' --exclude '*.m4a' --exclude '*.wav' --exclude '*.sqlite' --exclude '*.db' \
-  --exclude '.DS_Store' --exclude '*.bak' --exclude '*.bak_*' --exclude 'threads_actions' --exclude 'kpi_dashboard_site/.git' \
+  --exclude '.DS_Store' --exclude '*.bak' --exclude '*.bak_*' --exclude '*.broken.*' \
   "$SRC/" "$DST/"
 
 # 2. いまの crontab を書き出す（Macでしか見られない情報の中で、いちばん大事なもの）
