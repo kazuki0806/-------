@@ -26,6 +26,7 @@ rsync -a --delete --delete-excluded \
   --exclude '*secret*' --exclude '*Secret*' --exclude '*token*' --exclude '*Token*' --exclude '*.enc' \
   --exclude 'roster*.json' --exclude 'roster.*' --exclude 'backups' --exclude 'backup' --exclude '*_backup*' \
   --exclude 'codes.json' --exclude 'cwログパス台帳' --exclude 'cloudflare-values.txt' --exclude 'accounts_json*' \
+  --exclude '*ACCOUNTS_JSON*' --exclude '*貼る用*' --exclude '*.bak.*' --exclude '*ログパス*' \
   --exclude 'credentials*.json' --exclude 'client_secret*.json' --exclude 'service_account*.json' \
   --exclude '*.log' --exclude '*.tgz' --exclude '*.zip' --exclude '*.tar' --exclude '*.tar.gz' \
   --exclude '*.mp4' --exclude '*.mov' --exclude '*.m4a' --exclude '*.wav' --exclude '*.sqlite' --exclude '*.db' \
@@ -39,7 +40,8 @@ crontab -l > "$DST/crontab_now.txt" 2>/dev/null || echo "# crontab は空です"
   ls -la "$HOME/claude code/line-threads" 2>/dev/null; ls -la "$HOME/業務/line-sales" 2>/dev/null; } > "$DST/line_env_files.txt"
 
 # 3. 秘密情報らしき文字列が残っていないかを調べる（見つかったら止める）
-HITS=$(grep -rIl -E 'LINE_CHANNEL_ACCESS_TOKEN=|ghp_[A-Za-z0-9]{20,}|github_pat_|sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|"password"\s*:\s*"[^"]{4,}"|secret_[A-Za-z0-9]{30,}|ntn_[A-Za-z0-9]{30,}' "$DST" 2>/dev/null | grep -v '/.git/' | head -50)
+# 「値そのもの」だけを探す。キー名だけ（トークンを読むコードや .env の雛形）には反応しない。
+HITS=$(grep -rIl -E 'LINE_CHANNEL_ACCESS_TOKEN=[A-Za-z0-9+/=_-]{40,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-ant-[A-Za-z0-9_-]{30,}|AIza[0-9A-Za-z_-]{30,}|secret_[A-Za-z0-9]{40,}|ntn_[A-Za-z0-9]{40,}|"(password|pass|パスワード)"\s*:\s*"[^"]{6,}"' "$DST" 2>/dev/null | grep -v '/.git/' | grep -vE '\.(example|template|md)$' | head -50)
 if [ -n "$HITS" ]; then
   echo "★ 秘密情報らしき文字列が残っているファイルがあります。push を止めました。"
   echo "$HITS"
@@ -63,6 +65,9 @@ cat > .gitignore <<'IGN'
 roster*.json
 roster.*
 backups/
+*ACCOUNTS_JSON*
+*貼る用*
+*ログパス*
 codes.json
 cwログパス台帳/
 node_modules/
