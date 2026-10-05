@@ -20,11 +20,12 @@ command -v git >/dev/null || { echo "git がありません"; exit 1; }
 
 mkdir -p "$DST"
 # 1. 秘密情報・大きいもの・他のリポジトリにあるものを除いてコピーする
-rsync -a --delete \
+rsync -a --delete --delete-excluded \
   --exclude '.git' --exclude 'node_modules' --exclude '__pycache__' --exclude '.venv' --exclude 'venv' \
   --exclude '.env' --exclude '*.env' --exclude '.dev.vars' --exclude '*.key' --exclude '*.pem' --exclude '*.p12' \
   --exclude '*secret*' --exclude '*Secret*' --exclude '*token*' --exclude '*Token*' --exclude '*.enc' \
-  --exclude 'roster.json' --exclude 'codes.json' --exclude 'cwログパス台帳' --exclude 'cloudflare-values.txt' \
+  --exclude 'roster*.json' --exclude 'roster.*' --exclude 'backups' --exclude 'backup' --exclude '*_backup*' \
+  --exclude 'codes.json' --exclude 'cwログパス台帳' --exclude 'cloudflare-values.txt' --exclude 'accounts_json*' \
   --exclude 'credentials*.json' --exclude 'client_secret*.json' --exclude 'service_account*.json' \
   --exclude '*.log' --exclude '*.tgz' --exclude '*.zip' --exclude '*.tar' --exclude '*.tar.gz' \
   --exclude '*.mp4' --exclude '*.mov' --exclude '*.m4a' --exclude '*.wav' --exclude '*.sqlite' --exclude '*.db' \
@@ -59,7 +60,9 @@ cat > .gitignore <<'IGN'
 *.pem
 *secret*
 *token*
-roster.json
+roster*.json
+roster.*
+backups/
 codes.json
 cwログパス台帳/
 node_modules/
