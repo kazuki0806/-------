@@ -76,7 +76,7 @@ def main():
     os.replace(tmp, PATH)
     print("足しました: " + PATH)
     print("バックアップ: " + backup)
-    print("次は cw_pm で  python3 sync.py --force  →  python3 gas_push.py --check シート  →  python3 gas_push.py シート")
+    print("次は cw_pm で  python3 sync.py --check（差分なしを確認）→  python3 gas_push.py --check シート  →  python3 gas_push.py シート")
     return 0
 
 
