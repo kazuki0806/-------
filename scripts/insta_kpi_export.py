@@ -9,10 +9,15 @@
 出力（--points DIR）:
   <キー>.json     record_analytics_metric_points にそのまま渡す点（合計は毎日・dims なし。
                   内訳は dims 1つで、合計が0でない日だけ）
-  <キー>.parquet  証憑（毎日の合計と、内訳の0も含む全表。日付・内訳・値の集計だけで、顧客名は入れない）
-  summary.json    キーごとの点の数・size_bytes・checksum・rows
+  <キー>_<期間の初日>_<期間の末日>.parquet
+                  証憑（毎日の合計と、内訳の0も含む全表。日付・内訳・値の集計だけで、顧客名は入れない）。
+                  期間は PERIODS の区切りごとに分ける
+  summary.json    キーごとの点の数と evidence（period_from・period_to・file・size_bytes・checksum・rows）
+
+--from は区切りの初日にする（2026-10-01 か、11月からは各月の1日）。
 """
 import argparse
+import calendar
 import collections
 import datetime as dt
 import hashlib
@@ -34,6 +39,23 @@ METRICS = {
     "contracts": ("インスタ 契約数", ["partner", "course"]),
     "sales": ("インスタ 売上", ["partner", "closer", "course"]),
 }
+
+# 証憑の期間の区切り。Addness は、既にある証憑と期間がまったく同じか、まったく重ならない証憑しか
+# 受け付けない。2026-10-07 時点で 7/1〜9/30 と 10/6 の証憑があるので、10月はそれに重ならないように
+# 区切り、11月からは月ごとにする。
+PERIODS = [
+    (dt.date(2026, 7, 1), dt.date(2026, 9, 30)),
+    (dt.date(2026, 10, 1), dt.date(2026, 10, 5)),
+    (dt.date(2026, 10, 6), dt.date(2026, 10, 6)),
+    (dt.date(2026, 10, 7), dt.date(2026, 10, 31)),
+]
+
+
+def period_of(day):
+    for start, end in PERIODS:
+        if start <= day <= end:
+            return start, end
+    return day.replace(day=1), day.replace(day=calendar.monthrange(day.year, day.month)[1])
 
 
 def to_date(v, year=None):
@@ -257,7 +279,7 @@ def sparse(rows):
     return [p for p in rows if "dims" not in p or p["period"] in nonzero]
 
 
-def write_points(rows, outdir, d_from, d_to):
+def write_points(rows, outdir):
     import pyarrow as pa
     import pyarrow.parquet as pq
 
@@ -267,23 +289,30 @@ def write_points(rows, outdir, d_from, d_to):
         rec = sparse(pts)
         with open(os.path.join(outdir, f"{key}.json"), "w") as f:
             json.dump(rec, f, ensure_ascii=False)
-        table = pa.table({
-            "period": [p["period"] for p in pts],
-            "dim_key": [next(iter(p["dims"])) if "dims" in p else "" for p in pts],
-            "dim_value": [next(iter(p["dims"].values())) if "dims" in p else "" for p in pts],
-            "value": [float(p["value"]) for p in pts],
-        })
-        path = os.path.join(outdir, f"{key}.parquet")
-        pq.write_table(table, path)
-        data = open(path, "rb").read()
-        summary[key] = {
-            "points": len(rec),
-            "rows": table.num_rows,
-            "size_bytes": len(data),
-            "checksum": hashlib.sha256(data).hexdigest(),
-            "period_from": d_from.isoformat(),
-            "period_to": d_to.isoformat(),
-        }
+        by_period = collections.defaultdict(list)
+        for p in pts:
+            by_period[period_of(dt.date.fromisoformat(p["period"]))].append(p)
+        evidence = []
+        for (p_from, p_to), part in sorted(by_period.items()):
+            table = pa.table({
+                "period": [p["period"] for p in part],
+                "dim_key": [next(iter(p["dims"])) if "dims" in p else "" for p in part],
+                "dim_value": [next(iter(p["dims"].values())) if "dims" in p else "" for p in part],
+                "value": [float(p["value"]) for p in part],
+            })
+            name = f"{key}_{p_from}_{p_to}.parquet"
+            path = os.path.join(outdir, name)
+            pq.write_table(table, path)
+            data = open(path, "rb").read()
+            evidence.append({
+                "period_from": p_from.isoformat(),
+                "period_to": p_to.isoformat(),
+                "file": name,
+                "size_bytes": len(data),
+                "checksum": hashlib.sha256(data).hexdigest(),
+                "rows": table.num_rows,
+            })
+        summary[key] = {"title": METRICS[key][0], "points": len(rec), "evidence": evidence}
     with open(os.path.join(outdir, "summary.json"), "w") as f:
         json.dump(summary, f, ensure_ascii=False, indent=1)
     return summary
@@ -305,6 +334,9 @@ def main():
     read_inf(parse_kv(a.inf), events)
 
     d_from, d_to = dt.date.fromisoformat(a.d_from), dt.date.fromisoformat(a.d_to)
+    start = period_of(d_from)[0]
+    if start != d_from:
+        raise SystemExit(f"--from は証憑の区切りの初日にする（{d_from} を含む区切りは {start} から）")
     points = build_rows(events, d_from, d_to)
 
     # 月ごとの合計（確かめ用）
@@ -316,7 +348,7 @@ def main():
                 months[p["period"][:7]] += p["value"]
         print(f"  {title}: " + ", ".join(f"{m} {int(v) if float(v).is_integer() else v}" for m, v in sorted(months.items())))
     if a.points:
-        s = write_points(points, a.points, d_from, d_to)
+        s = write_points(points, a.points)
         print(json.dumps({k: v["points"] for k, v in s.items()}, ensure_ascii=False))
 
 
